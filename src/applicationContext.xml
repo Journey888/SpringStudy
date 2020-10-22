@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop.xsd">
+              
+           
+<!-- 写到xml里的东西东西都是反射，必须使用全路径,id不是对象名表示获取到对象标识，可以用name表示别名但一般不用
+	class 创建那个类的对象    
+	 -->
+
+	 <!-- 配置文件被加载，对象立即被创建 ，默认走无参构造方法-->
+	<bean id="peo" class="com.lc.pojo.People">
+		<!--index为构造方法形参的下标，type为形参类型，name为形参属性名，通过这三个标签确定使用哪个构造方法，可以不同时出现，明确构造方法即可 
+			ref为引用另一个bean
+			value为基本数据类型或String等 -->
+		<constructor-arg index="0"  value="123" ></constructor-arg>
+		<constructor-arg index = "1" value = "张三"></constructor-arg>
+	</bean>
+	 
+	
+	<!-- 实例工厂创建 -->
+	<bean id = "factory" class="com.lc.pojo.PeopleFactory"></bean>
+	<bean id = "peo1" factory-bean="factory" factory-method="newInstance"></bean>
+	
+	<!-- 静态工厂，知道类和方法名即可 -->
+	<bean id = "peo2" class = "com.lc.pojo.PeopleFactory" factory-method="newInstance1"></bean>
+	
+	
+	<!-- 通过set方法对属性进行注入 -->
+	<bean id="peo3" class="com.lc.pojo.People">
+		<property name="id" value = "22"></property>
+		<property name="name" value = "zhangsan"></property>
+		<property name="sets">
+			<set>
+				<value>1</value>
+				<value>安静</value>
+				<value>1fs</value>
+				<value>1sf</value>
+			</set>
+		</property>
+		
+		<property name="lists" value="dfs">
+		</property>
+		
+		<property name="strs" value = "fsf">
+		</property>
+		
+		<property name="maps">
+			<map>
+				<entry key = "wo" value="yao"></entry>
+				<entry key = "ni" value="deai"></entry>
+			</map>
+		</property>
+		
+		<!-- 依赖注入 -->
+		<property name="desk" ref="deskK"></property>
+	</bean>
+	
+	<bean id = "deskK" class="com.lc.pojo.Desk"></bean>
+	
+	
+	
+	
+		
+	
+	
+	
+	<!-- spring整合mybatis -->
+	<!-- 数据源封装类 .数据源：获取数据库连接 -->
+	<bean id ="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource" >
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/wotule"/>
+		<property name="username" value="root" />
+		<property name="password" value="123456" />
+	</bean>
+	
+	<!-- 创建SqlSessionFactory对象 -->
+	<bean id="factory1" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 数据库连接信息来源于上面的DataSource -->
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	<!-- 扫描器相当于mybatis.xml中mapper下package标签,扫描完成后帮助实例化了StudentMapper
+		等接口，实例化后的对象名为接口名首字母小写 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- 扫描哪个包 -->
+		<property name="basePackage" value="com.lc.mapper"></property>
+		<!-- 和factory产生关系 -->
+		<property name="sqlSessionFactory" ref="factory1"></property>
+	</bean>
+	
+	<!-- 由spring管理service实现类，才能实现studentMapper的注入 -->
+	<bean id = "studentService" class="com.lc.service.impl.StudentServiceImpl">
+		<property name="studentMapper" ref="studentMapper"></property>
+	</bean>
+	
+	
+	
+	
+	
+	
+	
+	<!-- AOP面向切面编程 -->
+	
+	<!-- 使用Scheme-based方式实现AOP -->
+	<!-- 配置通知，在切面中引入 -->
+	<bean id= "mybefore" class="com.lc.advice.MyBeforeAdvice"> </bean>
+	<bean id = "myafter" class="com.lc.advice.MyAfterAdvice"></bean>
+	
+	<aop:config>
+	<!-- 配置切点 -->
+		<aop:pointcut expression="execution(* com.lc.test.Demo.demo2())" id="mypoint"/>
+		<!-- 在切面处添加前置通知 -->
+		<aop:advisor advice-ref="mybefore" pointcut-ref="mypoint"/>
+		<!-- 添加后置通知 -->
+		<aop:advisor advice-ref="myafter" pointcut-ref="mypoint"/>
+	</aop:config>
+	<!-- 配置demo类，测试使用 -->
+	<bean id="demo" class="com.lc.test.Demo"></bean>
+	
+	
+	 
+	
+	<!-- 使用aspectJ方法实现AOP 实现异常通知-->
+	<bean id = "mythrow" class="com.lc.advice.MyThrowAdvice"></bean>
+	<aop:config>
+		<!-- ref代表方法所在类 -->
+		<aop:aspect ref="mythrow">
+			<aop:pointcut expression="execution(* com.lc.test.Demo.demo1())" id="mypoint1"/>
+			<!-- 触发异常时执行method方法 返回异常对象为throwing，必须和异常通知中方法参数名相同（可以不在通知
+				中声明异常对象-->
+			<aop:after-throwing method="myexception()" pointcut-ref="mypoint1" throwing="e"/>
+		</aop:aspect>
+	</aop:config>
+	
+	
+	<!-- 环绕通知 -->
+	<bean id = "myaround" class="com.lc.advice.MyAround"></bean>
+	<aop:config>
+		<aop:pointcut expression="execution(* com.lc.test.Demo.demo3())" id="mypoint2"/>
+		<aop:advisor advice-ref="myaround" pointcut-ref="mypoint"/>
+	</aop:config>
+	
+	
+	
+	
+	
+	
+	
+	
+
+</beans>
